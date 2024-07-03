@@ -6,6 +6,10 @@ TagManager:
   tags:
   - SamplesInfoPanel
   - HandTag
+  - Maple
+  - Stone
+  - Metal
+  - ChaseTag
   layers:
   - Default
   - TransparentFX
