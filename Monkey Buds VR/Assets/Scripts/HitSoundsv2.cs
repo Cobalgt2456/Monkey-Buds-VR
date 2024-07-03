@@ -6,7 +6,7 @@ using UnityEngine.XR;
 
 public class HitSoundsv2 : MonoBehaviour
 {
-    public AudioClip[] water, stone, tree, grass, metal, glass, snow, dirt, carpet, wood;
+    public AudioClip[] water, stone, tree, grass, metal, glass, snow, dirt, maple, button, carpet, wood;
     public AudioSource audioSource;
     public bool LeftController;
     private float hapticWaitSeconds = 0.05f;
@@ -22,6 +22,8 @@ public class HitSoundsv2 : MonoBehaviour
             { "Glass", glass },
             { "Snow", snow },
             { "Dirt", dirt },
+            { "Maple", maple },
+            { "Button", button },
             { "Carpet", carpet },
             { "Wood", wood }
         };
