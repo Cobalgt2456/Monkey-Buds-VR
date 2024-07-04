@@ -10,6 +10,7 @@ TagManager:
   - Stone
   - Metal
   - ChaseTag
+  - Button
   layers:
   - Default
   - TransparentFX
