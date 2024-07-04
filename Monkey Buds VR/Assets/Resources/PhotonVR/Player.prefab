@@ -2704,6 +2704,7 @@ GameObject:
   - component: {fileID: 8565406117360176805}
   - component: {fileID: 898607237399874742}
   - component: {fileID: 7780029385335637883}
+  - component: {fileID: 5788360910462010951}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -2798,6 +2799,25 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &5788360910462010951
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5550819733793230860}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b28f94ddd78a9f41929e886ddda3b81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  recorder: {fileID: 1573582349064640207}
+  FaceMaterial: {fileID: 2100000, guid: 0c04ea10b073f424a9f65dede5c1ea3d, type: 2}
+  NotTalking: {fileID: 2800000, guid: a354f7dfd87bb0747a8dd7e93dfe9ba5, type: 3}
+  SlightlyTalking: {fileID: 2800000, guid: 4cbe0a20d75c9c4449448712bfb7557a, type: 3}
+  Talking: {fileID: 2800000, guid: 4cbe0a20d75c9c4449448712bfb7557a, type: 3}
+  LoudTalking: {fileID: 2800000, guid: 4cbe0a20d75c9c4449448712bfb7557a, type: 3}
+  Screaming: {fileID: 2800000, guid: 4cbe0a20d75c9c4449448712bfb7557a, type: 3}
 --- !u!1 &5626354841016739907
 GameObject:
   m_ObjectHideFlags: 0
@@ -4069,6 +4089,7 @@ GameObject:
   - component: {fileID: 8815493292797174758}
   - component: {fileID: 939489228214661568}
   - component: {fileID: 467830851364625735}
+  - component: {fileID: 1573582349064640207}
   m_Layer: 0
   m_Name: Speaker
   m_TagString: Untagged
@@ -4205,6 +4226,49 @@ MonoBehaviour:
     Max: 1000
     SpeedUpPerc: 5
   restartOnDeviceChange: 1
+--- !u!114 &1573582349064640207
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7481971491519914025}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91175dcc15224463780e01a8a98b1b60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  voiceDetection: 0
+  voiceDetectionThreshold: 0.01
+  voiceDetectionDelayMs: 500
+  interestGroup: 0
+  useTargetPlayers: 0
+  targetPlayers: 
+  debugEchoMode: 0
+  reliableMode: 0
+  encrypt: 0
+  transmitEnabled: 1
+  samplingRate: 24000
+  frameDuration: 20000
+  bitrate: 30000
+  sourceType: 0
+  microphoneType: 0
+  audioClip: {fileID: 0}
+  loopAudioClip: 1
+  recordingEnabled: 1
+  audioSessionParameters:
+    Category: 4
+    Mode: 1
+    CategoryOptions: 0800000004000000
+  editorAudioSessionPreset: 1
+  androidMicrophoneSettings:
+    EnableAEC: 1
+    EnableAGC: 1
+    EnableNS: 1
+  stopRecordingWhenPaused: 0
+  useOnAudioFilterRead: 0
+  useMicrophoneTypeFallback: 1
+  recordWhenJoined: 1
 --- !u!1 &7638886156417823148
 GameObject:
   m_ObjectHideFlags: 0
