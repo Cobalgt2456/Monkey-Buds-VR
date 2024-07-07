@@ -16,7 +16,7 @@ MonoBehaviour:
     AppIdRealtime: fcc40b22-84c2-49e7-85c5-0a805a0fc1f8
     AppIdFusion: 
     AppIdChat: 
-    AppIdVoice: 20fd8303-938b-4809-8fa5-ac8d42a8e243
+    AppIdVoice: 0b812e0b-4f0b-4726-917d-336b409879d8
     AppVersion: 
     UseNameServer: 1
     FixedRegion: eu
@@ -45,6 +45,8 @@ MonoBehaviour:
   - RPCRefreshPlayerValues
   - DisableObjects
   - EnableObjects
+  - ReEnableObjects
+  - DisableSkinnedMeshRenderers
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 0
