@@ -12,6 +12,8 @@ TagManager:
   - ChaseTag
   - Button
   - Glass
+  - Carpet
+  - Wood
   layers:
   - Default
   - TransparentFX
