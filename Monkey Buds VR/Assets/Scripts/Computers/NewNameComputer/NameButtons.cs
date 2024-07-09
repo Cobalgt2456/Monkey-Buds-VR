@@ -23,7 +23,7 @@ public class NameButtons : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("FC"))
+        if (other.CompareTag("HandTag"))
         {
             if (NameType == Type1.NameButton)
             {
@@ -33,14 +33,14 @@ public class NameButtons : MonoBehaviour
             {
                 if(NameManager.Name == string.Empty)
                 {
-                    NameManager.Name = "Chimp" + Random.Range(1000000, 9999999);
+                    NameManager.Name = "MONKEY" + Random.Range(1000000, 9999999);
                 }
 
                 else foreach (string BannedName in BannedNames)
                 {
                     if (NameManager.Name.Contains(BannedName))
                     {
-                        NameManager.Name = "Chimp" + Random.Range(1000000, 9999999);
+                        NameManager.Name = "MONKEY" + Random.Range(1000000, 9999999);
                         Debug.Log("You have now been kicked!");
 
                         PhotonNetwork.LeaveRoom();
