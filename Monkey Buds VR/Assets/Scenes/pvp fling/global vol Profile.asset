@@ -15,7 +15,7 @@ MonoBehaviour:
   active: 1
   postExposure:
     m_OverrideState: 1
-    m_Value: -0.04
+    m_Value: 0.34
   contrast:
     m_OverrideState: 1
     m_Value: 35
@@ -26,36 +26,8 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: 0
   saturation:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 44
---- !u!114 &-7239165985051135042
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c5e1dc532bcb41949b58bc4f2abfbb7e, type: 3}
-  m_Name: LensDistortion
-  m_EditorClassIdentifier: 
-  active: 1
-  intensity:
-    m_OverrideState: 1
-    m_Value: -0.387
-  xMultiplier:
-    m_OverrideState: 1
-    m_Value: 1
-  yMultiplier:
-    m_OverrideState: 0
-    m_Value: 1
-  center:
-    m_OverrideState: 1
-    m_Value: {x: 0.5, y: 0.5}
-  scale:
-    m_OverrideState: 1
-    m_Value: 1.36
 --- !u!114 &-5742081772480433991
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -214,7 +186,6 @@ MonoBehaviour:
   - {fileID: 7245312325497594862}
   - {fileID: 3475646290378728533}
   - {fileID: 4610819342780939393}
-  - {fileID: -7239165985051135042}
   - {fileID: 7357270881598072739}
   - {fileID: -760087615352520788}
   - {fileID: -5742081772480433991}
@@ -232,13 +203,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   active: 1
   shadows:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {r: 0.20754719, g: 0.20754719, b: 0.20754719, a: 1}
   highlights:
     m_OverrideState: 1
     m_Value: {r: 0.8301887, g: 0.8301887, b: 0.8301887, a: 1}
   balance:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: -100
 --- !u!114 &3470470919394974634
 MonoBehaviour:
@@ -336,10 +307,10 @@ MonoBehaviour:
     m_Value: {x: 0.5, y: 0.5}
   intensity:
     m_OverrideState: 1
-    m_Value: 0.393
+    m_Value: 0.318
   smoothness:
     m_OverrideState: 1
-    m_Value: 0.434
+    m_Value: 0.883
   rounded:
     m_OverrideState: 1
     m_Value: 0
@@ -358,4 +329,4 @@ MonoBehaviour:
   active: 1
   intensity:
     m_OverrideState: 1
-    m_Value: 0.404
+    m_Value: 0
