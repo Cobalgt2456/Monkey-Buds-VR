@@ -328,9 +328,9 @@ MonoBehaviour:
   recordingEnabled: 1
   audioSessionParameters:
     Category: 4
-    Mode: 1
+    Mode: 0
     CategoryOptions: 0800000004000000
-  editorAudioSessionPreset: 1
+  editorAudioSessionPreset: 0
   androidNativeMicrophoneSettings:
     AcousticEchoCancellation: 1
     AutomaticGainControl: 1

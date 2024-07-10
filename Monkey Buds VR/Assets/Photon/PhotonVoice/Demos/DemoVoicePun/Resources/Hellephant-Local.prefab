@@ -756,7 +756,7 @@ MonoBehaviour:
   autoStart: 1
   audioSessionParameters:
     Category: 4
-    Mode: 1
+    Mode: 0
     CategoryOptions: 0800000004000000
   useCustomAudioSessionParameters: 0
   audioSessionPresetIndex: 0

@@ -36,6 +36,11 @@ namespace Photon.Voice
 
         #region Private Fields
 
+        private EnterRoomParams voiceRoomParams = new EnterRoomParams
+        {
+            RoomOptions = new RoomOptions { IsVisible = false, PlayerTtl = 2000 }
+        };
+
         /// <summary>Used as deliberate disconnect / prevents automatic (re)connect when moving to state disconnected.</summary>
         /// <remarks>
         /// After a manualDisconnect, the VoiceFollowClient will go online at the next state change of Leader.
@@ -55,7 +60,7 @@ namespace Photon.Voice
         {
             if (!LeaderInRoom)
             {
-                this.Logger.Log(LogLevel.Error, "Cannot connect and join if Leader is not joined.");
+                this.Logger.LogError("Cannot connect and join if Leader is not joined.");
                 return false;
             }
             if (this.ConnectVoice())
@@ -63,7 +68,7 @@ namespace Photon.Voice
                 this.manualDisconnect = false;
                 return true;
             }
-            this.Logger.Log(LogLevel.Error, "Connecting to server failed.");
+            this.Logger.LogError("Connecting to server failed.");
             return false;
         }
 
@@ -74,7 +79,7 @@ namespace Photon.Voice
         {
             if (!this.Client.IsConnected)
             {
-                this.Logger.Log(LogLevel.Error, "Cannot Disconnect if not connected.");
+                this.Logger.LogError("Cannot Disconnect if not connected.");
                 return;
             }
             this.manualDisconnect = true;
@@ -108,12 +113,12 @@ namespace Photon.Voice
                 {
                     case OperationCode.Authenticate:
                     case OperationCode.AuthenticateOnce:
-                        this.Logger.Log(LogLevel.Error, "Setting AutoConnectAndJoin to false because authentication failed. Error: {0}. Message: {1}.", operationResponse.ReturnCode, operationResponse.DebugMessage);
+                        this.Logger.LogError("Setting AutoConnectAndJoin to false because authentication failed. Error: {0}. Message: {1}.", operationResponse.ReturnCode, operationResponse.DebugMessage);
                         this.errAuthOrJoin = true;
                         break;
 
                     case OperationCode.JoinGame:
-                        this.Logger.Log(LogLevel.Error, "Failed to join room. RoomName: '{2}' Region: {3} Error: {0}. Message: {1}.", operationResponse.ReturnCode, operationResponse.DebugMessage, GetVoiceRoomName(), this.Client.CloudRegion);
+                        this.Logger.LogError("Failed to join room. RoomName: '{2}' Region: {3} Error: {0}. Message: {1}.", operationResponse.ReturnCode, operationResponse.DebugMessage, this.voiceRoomParams.RoomName, this.Client.CloudRegion);
 
                         // TODO: replace the following with a cooldown time. check error code if this is a temporary issue and if so, the client can try again
                         this.errAuthOrJoin = true;    // prevents re-connecting without game logic doing something
@@ -122,7 +127,7 @@ namespace Photon.Voice
                         break;
 
                     default:
-                        this.Logger.Log(LogLevel.Error, "Operation {0} response error code {1} message {2}", operationResponse.OperationCode, operationResponse.ReturnCode, operationResponse.DebugMessage);
+                        this.Logger.LogError("Operation {0} response error code {1} message {2}", operationResponse.OperationCode, operationResponse.ReturnCode, operationResponse.DebugMessage);
                         break;
                 }
             }
@@ -130,7 +135,7 @@ namespace Photon.Voice
 
         protected void LeaderStateChanged(ClientState toState)
         {
-            this.Logger.Log(LogLevel.Info, "OnLeaderStateChanged to {0}", toState);
+            this.Logger.LogInfo("OnLeaderStateChanged to {0}", toState);
             if (toState == ClientState.Joined)
             {
                 //clear the error state so Voice can try to connect once
@@ -168,7 +173,7 @@ namespace Photon.Voice
                 }
             }
 
-            this.Logger.Log(LogLevel.Debug, "OnVoiceStateChanged  from {0} to {1}", fromState, toState);
+            this.Logger.LogDebug("OnVoiceStateChanged  from {0} to {1}", fromState, toState);
             this.FollowLeader(toState);
         }
 
@@ -178,41 +183,37 @@ namespace Photon.Voice
             {
                 case ClientState.PeerCreated:
                 case ClientState.Disconnected:
-                    this.Logger.Log(LogLevel.Info, "Leader joined room, now connecting Voice client");
+                    this.Logger.LogInfo("Leader joined room, now connecting Voice client");
                     if (!this.ConnectVoice())
                     {
-                        this.Logger.Log(LogLevel.Error, "Connecting to server failed.");
+                        this.Logger.LogError("Connecting to server failed.");
                     }
                     break;
                 case ClientState.ConnectedToMasterServer:
-                    this.Logger.Log(LogLevel.Info, "Leader joined room, now joining Voice room");
+                    this.Logger.LogInfo("Leader joined room, now joining Voice room");
                     if (!this.JoinVoiceRoom(GetVoiceRoomName()))
                     {
-                        this.Logger.Log(LogLevel.Error, "Joining a voice room failed.");
+                        this.Logger.LogError("Joining a voice room failed.");
                     }
                     break;
                 default:
-                    this.Logger.Log(LogLevel.Warning, "Leader joined room, Voice client is busy ({0}). Is this expected?", this.ClientState);
+                    this.Logger.LogWarning("Leader joined room, Voice client is busy ({0}). Is this expected?", this.ClientState);
                     break;
             }
         }
 
-        protected virtual bool JoinVoiceRoom(string voiceRoomName)
+        private bool JoinVoiceRoom(string voiceRoomName)
         {
             if (string.IsNullOrEmpty(voiceRoomName))
             {
-                this.Logger.Log(LogLevel.Error, "Voice room name is null or empty.");
+                this.Logger.LogError("Voice room name is null or empty.");
                 return false;
             }
 
-            var roomParams = new EnterRoomParams
-            {
-                RoomOptions = new RoomOptions { IsVisible = false, PlayerTtl = 2000 },
-                RoomName = voiceRoomName
-            };
+            this.voiceRoomParams.RoomName = voiceRoomName;
 
             Debug.Log($"Calling OpJoinOrCreateRoom for room name '{voiceRoomName}' region {this.Client.CloudRegion}.");  // TODO: remove when done debugging VoiceFollowClient
-            return this.Client.OpJoinOrCreateRoom(roomParams);
+            return this.Client.OpJoinOrCreateRoom(this.voiceRoomParams);
         }
 
         private void FollowLeader(ClientState toState)
@@ -222,7 +223,7 @@ namespace Photon.Voice
                 case ClientState.Joined:
                 case ClientState.Disconnected:
                 case ClientState.ConnectedToMasterServer:
-                    this.Logger.Log(LogLevel.Debug, $"FollowLeader for state {toState}");
+                    this.Logger.LogDebug($"FollowLeader for state {toState}");
                     this.FollowLeader();
                     break;
             }
@@ -262,12 +263,12 @@ namespace Photon.Voice
                 string currentRoomName = this.Client.CurrentRoom.Name;
                 if (string.IsNullOrEmpty(currentRoomName) || !currentRoomName.Equals(expectedRoomName))
                 {
-                    this.Logger.Log(LogLevel.Warning,
+                    this.Logger.LogWarning(
                         "Voice room mismatch: Expected:\"{0}\" Current:\"{1}\", leaving the second to join the first.",
                         expectedRoomName, currentRoomName);
                     if (!this.Client.OpLeaveRoom(false))
                     {
-                        this.Logger.Log(LogLevel.Error, "Leaving the current voice room failed.");
+                        this.Logger.LogError("Leaving the current voice room failed.");
                     }
                 }
 

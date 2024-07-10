@@ -262,24 +262,20 @@ namespace Photon.Voice
             this.threadingEnabled = voiceClient.ThreadingEnabled;
             this.id = id;
 
-
-            this.shortName  = "v#" + id + "ch#" + voiceClient.channelStr(channelId);
-            this.Name = "Local " + info.Codec + " v#" + id + " ch#" + voiceClient.channelStr(channelId);
-            this.LogPrefix = "[PV] " + Name;
-
             if (opt.Encoder == null)
             {
                 var m = LogPrefix + ": encoder is null";
-                voiceClient.logger.Log(LogLevel.Error, m);
+                voiceClient.logger.LogError(m);
                 throw new ArgumentNullException("encoder");
             }
             this.encoder = opt.Encoder;
             this.encoder.Output = sendFrame;
         }
 
-        protected string shortName { get; }
-        public string Name { get; }
-        public string LogPrefix { get; }
+        protected string shortName { get { return "v#" + id + "ch#" + voiceClient.channelStr(channelId); } }
+
+        public string Name { get { return "Local " + info.Codec + " v#" + id + " ch#" + voiceClient.channelStr(channelId); } }
+        public string LogPrefix { get { return "[PV] " + Name; } }
 
         private const int NO_TRANSMIT_TIMEOUT_MS = 100; // should be greater than SendFrame() call interval
         private int lastTransmitTime = Environment.TickCount - NO_TRANSMIT_TIMEOUT_MS;
@@ -320,11 +316,6 @@ namespace Photon.Voice
             sendVoiceInfoAndConfigFrame(DebugEchoMode, targetPlayers_);
         }
 
-        internal void onLeaveChannel()
-        {
-            sendVoiceRemove(DebugEchoMode, targetPlayers_);
-        }
-
         internal void onPlayerJoin(int playerId)
         {
             if (targetPlayers_ == null || targetPlayers_.Contains(playerId))
@@ -333,7 +324,7 @@ namespace Photon.Voice
             }
             else
             {
-                this.voiceClient.logger.Log(LogLevel.Info, LogPrefix + " player " + playerId + " join is ignored becuase it's not in target players");
+                this.voiceClient.logger.LogInfo(LogPrefix + " player " + playerId + " join is ignored becuase it's not in target players");
             }
         }
 
@@ -367,22 +358,27 @@ namespace Photon.Voice
             {
                 string targetStr = getTargetStr(targetMe, targetPlayers);
 
-                this.voiceClient.logger.Log(LogLevel.Info, LogPrefix + " Sending voice info to " + targetStr + ": " + info.ToString() + " ev=" + evNumber);
+                this.voiceClient.logger.LogInfo(LogPrefix + " Sending voice info to " + targetStr + ": " + info.ToString() + " ev=" + evNumber);
                 voiceClient.transport.SendVoiceInfo(this, channelId, targetMe, targetPlayers);
 
                 if (configFrame.Count != 0)
                 {
-                    this.voiceClient.logger.Log(LogLevel.Info, LogPrefix + " Sending config frame to " + targetStr);
+                    this.voiceClient.logger.LogInfo(LogPrefix + " Sending config frame to " + targetStr);
                     sendFrame0(configFrame, FrameFlags.Config, targetMe, targetPlayers, 0, true);
                 }
             }
+        }
+
+        internal void sendVoiceRemove()
+        {
+            sendVoiceRemove(DebugEchoMode, targetPlayers_);
         }
 
         protected void sendVoiceRemove(bool targetMe, int[] targetPlayers)
         {
             if (targetExits(targetMe, targetPlayers))
             {
-                this.voiceClient.logger.Log(LogLevel.Info, LogPrefix + " Sending voice remove to " + getTargetStr(targetMe, targetPlayers));
+                this.voiceClient.logger.LogInfo(LogPrefix + " Sending voice remove to " + getTargetStr(targetMe, targetPlayers));
                 voiceClient.transport.SendVoiceRemove(this, channelId, targetMe, targetPlayers);
             }
         }
@@ -391,31 +387,12 @@ namespace Photon.Voice
         {
             if ((flags & FrameFlags.Config) != 0)
             {
-                if (configFrame != null)
-                {
-                    if (configFrame.SequenceEqual(compressed))
-                    {
-                        this.voiceClient.logger.Log(LogLevel.Trace, LogPrefix + " Got config frame from encoder, " + configFrame.Count + " bytes: repeated, not sending");
+                byte[] a = configFrame.Array != null && configFrame.Array.Length >= compressed.Count ? configFrame.Array : new byte[compressed.Count];
+                Buffer.BlockCopy(compressed.Array, compressed.Offset, a, 0, compressed.Count);
+                configFrame = new ArraySegment<byte>(a, 0, compressed.Count);
 
-return;
-                    }
-                    else
-                    {
-                        // try to reuse the buffer
-                        byte[] a = configFrame.Array != null && configFrame.Array.Length >= compressed.Count ? configFrame.Array : new byte[compressed.Count];
-
-                        Buffer.BlockCopy(compressed.Array, compressed.Offset, a, 0, compressed.Count);
-                        configFrame = new ArraySegment<byte>(a, 0, compressed.Count);
-                        this.voiceClient.logger.Log(LogLevel.Info, LogPrefix + " Got config frame from encoder, " + configFrame.Count + " bytes: updated, sending");
-                    }
-                }
-                else
-                {
-                    configFrame = new ArraySegment<byte>(new byte[compressed.Count]);
-                    this.voiceClient.logger.Log(LogLevel.Info, LogPrefix + " Got config frame from encoder, " + configFrame.Count + " bytes: initial, senfing");
-                }
+                this.voiceClient.logger.LogInfo(LogPrefix + " Got config frame from encoder, " + configFrame.Count + " bytes");
             }
-
             if (this.voiceClient.transport.IsChannelJoined(this.channelId) && this.TransmitEnabled)
             {
                 // test
@@ -498,9 +475,10 @@ return;
                     this.FramesSentFragments++;
                 }
 
-                if (voiceClient.logger.Level >= LogLevel.Trace) voiceClient.logger.Log(LogLevel.Trace, LogPrefix + " ev#" + evNumber + " fr#" + FramesSent + " c#" + fragCount + " Fragmented sent from events " + (byte)(evNumber - fragCount) + "-" + evNumber + ", size: " + compressed.Count + ", flags: " + flags);
-            this.FramesSentFragmented++;
+                this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + evNumber + " fr#" + FramesSent + " c#" + fragCount + " Fragmented sent from events " + (byte)(evNumber - fragCount) + "-" + evNumber + ", size: " + compressed.Count + ", flags: " + flags);
+                this.FramesSentFragmented++;
             }
+
             this.FramesSent++;
             this.FramesSentBytes += compressed.Count;
 
@@ -533,8 +511,17 @@ return;
         {
             int fec = FEC;
 
+            byte borrowedByte = 0;
+            int borrowedBytePos = -1;
+
 //            if (this.evNumber % 7 != 0)
             this.voiceClient.transport.SendFrame(data, flags, this.evNumber, (byte)this.FramesSent, id, this.channelId, sendFramePar);
+
+            // restore borrowed byte
+            if (borrowedBytePos >= 0)
+            {
+                data.Array[borrowedBytePos] = borrowedByte;
+            }
 
             this.sendSpacingProfile.Update(false, false);
             if (this.DebugEchoMode)
@@ -647,14 +634,14 @@ return;
 
         private void setOutput<T>(Action<FrameOut<T>> output)
         {
-            logger.Log(LogLevel.Info, logPrefix + ": Creating default decoder " + voiceInfo.Codec + " for output FrameOut<" + typeof(T) + ">");
+            logger.LogInfo(logPrefix + ": Creating default decoder " + voiceInfo.Codec + " for output FrameOut<" + typeof(T) + ">");
             if (voiceInfo.Codec == Codec.AudioOpus)
             {
                 this.Decoder = new OpusCodec.Decoder<T>(output, logger);
             }
             else
             {
-                logger.Log(LogLevel.Error, logPrefix + ": FrameOut<" + typeof(T) + "> output set for non-audio decoder " + voiceInfo.Codec);
+                logger.LogError(logPrefix + ": FrameOut<" + typeof(T) + "> output set for non-audio decoder " + voiceInfo.Codec);
             }
         }
 
@@ -674,57 +661,6 @@ return;
 
     internal class RemoteVoice : IDisposable
     {
-        // Hides FrameBuffer and lock arrays behind a nice interface but slows down operations by 3 times in C# and Unity IL2CPP apps.
-        // The performance impact is negligible in a real app but we still prefer to lock and access without calls.
-        /*
-        class RingBuffer
-        {
-            FrameBuffer[] buf = new FrameBuffer[256];
-            // buf per element lock
-            // A thread tries to lock a frameQueue element by writing 1 to the correspondent bufLock element. If the previous value was already 1, lock fails and the thread starts over.
-            // To release the lock, the thread writes 0.
-            int[] bufLock = new int[256];
-
-            public ref FrameBuffer Lock(int i)
-            {
-                while (Interlocked.Exchange(ref bufLock[i], 1) == 1) ; // lock single slot for writing
-                return ref buf[i];
-            }
-
-            public void Unlock(int i)
-            {
-                Interlocked.Exchange(ref bufLock[i], 0);               // unlock single slot
-            }
-
-            public void Swap(int i, FrameBuffer f)
-            {
-                Lock(i);
-                buf[i].Release(); // unprocessed frame may be in the slot
-                buf[i] = f;
-                Unlock(i);
-            }
-
-            public ref FrameBuffer this[int i]
-            {
-                get => ref buf[i];
-            }
-
-            public void UnloclAll()
-            {
-                Array.Clear(bufLock, 0, bufLock.Length);
-            }
-
-            public void Clear()
-            {
-                for (int i = 0; i < buf.Length; i++)
-                {
-                    buf[i].Release();
-                    buf[i] = nullFrame;
-                }
-            }
-        }
-        */
-
         // Client.RemoteVoiceInfos support
         internal VoiceInfo Info { get; private set; }
         internal RemoteVoiceOptions options;
@@ -756,19 +692,18 @@ return;
             this.playerId = playerId;
             this.voiceId = voiceId;
             this.Info = info;
-            this.shortName = "v#" + voiceId + "ch#" + voiceClient.channelStr(channelId) + "p#" + playerId;
 
             if (this.options.Decoder == null)
             {
                 var m = LogPrefix + ": decoder is null (set it with options Decoder property or SetOutput method in OnRemoteVoiceInfoAction)";
-                voiceClient.logger.Log(LogLevel.Error, m);
+                voiceClient.logger.LogError(m);
                 disposed = true;
                 return;
             }
 
             if (!threadingEnabled)
             {
-                voiceClient.logger.Log(LogLevel.Info, LogPrefix + ": Starting decode singlethreaded");
+                voiceClient.logger.LogInfo(LogPrefix + ": Starting decode singlethreaded");
                 options.Decoder.Open(Info);
             }
             else
@@ -786,8 +721,8 @@ return;
             }
         }
 
-        private string shortName { get; }
-        public string LogPrefix { get; }
+        private string shortName { get { return "v#" + voiceId + "ch#" + voiceClient.channelStr(channelId) + "p#" + playerId; } }
+        public string LogPrefix { get; private set; }
 
         SpacingProfile receiveSpacingProfile = new SpacingProfile(1000);
 
@@ -814,7 +749,7 @@ return;
             {
                 if ((receivedBytes.Flags & FrameFlags.MaskFrag) != 0)
                 {
-                    this.voiceClient.logger.Log(LogLevel.Error, LogPrefix + " ev#" + evNumber + " fr#" + receivedBytes.FrameNum + " wr#" + frameWritePos + ", flags: " + receivedBytes.Flags + ": config frame can't be fragmented");
+                    this.voiceClient.logger.LogError(LogPrefix + " ev#" + evNumber + " fr#" + receivedBytes.FrameNum + " wr#" + frameWritePos + ", flags: " + receivedBytes.Flags + ": config frame can't be fragmented");
                 }
                 else
                 {
@@ -831,13 +766,13 @@ return;
                     receivedBytes.Retain();
                 }
 
-                // put it also in the normal frame buffer to avoid processing it as a lost frame
+                return;
             }
             // to avoid multiple empty frames injeciton to the decoder at startup when the current frame number is unknown.
             if (!started && !receivedBytes.IsFEC)
             {
                 started = true;
-                frameReadPos = receivedBytes.FrameNum;
+                frameReadPos = (byte)(receivedBytes.FrameNum - 1);
                 frameWritePos = receivedBytes.FrameNum;
                 eventReadPos = evNumber;
             }
@@ -884,21 +819,30 @@ return;
                     fecEventTimeout++;
                 }
 
-                    if( (byte)(frameWritePos - receivedBytes.FrameNum) > 127) // frameWritePos < receivedBytes.FrameNum
+                // receive gap
+                int miss = (byte)(receivedBytes.FrameNum - (frameWritePos + 1));
+
+                if (miss > 127)
+                {
+                    // late (out of order) frame
+                    // this frame is already counted in FramesMiss
+                    this.voiceClient.FramesLate++;
+                    this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + evNumber + " fr#" + receivedBytes.FrameNum + " wr#" + frameWritePos + " late: " + (255 - miss) + " r/b " + receivedBytes.Length + ", flags: " + receivedBytes.Flags);
+                }
+                else
+                {
+                    frameWritePos = receivedBytes.FrameNum;
+                    if (frameQueueReady != null)
                     {
-                        frameWritePos = receivedBytes.FrameNum;
-                        if (frameQueueReady != null)
-                        {
-                            frameQueueReady.Set();
-                        }
+                        frameQueueReady.Set();
                     }
 
-                    if ((byte)(receivedBytes.FrameNum - frameReadPos) > 127) // frameWritePos > receivedBytes.FrameNum
+                    if (miss != 0)
                     {
-                        // late frame
-                        this.voiceClient.FramesLate++;
-                        if (voiceClient.logger.Level >= LogLevel.Trace) voiceClient.logger.Log(LogLevel.Trace, LogPrefix + " ev#" + evNumber + " fr#" + receivedBytes.FrameNum + " wr#" + frameWritePos + " late: " + (byte)(frameWritePos - receivedBytes.FrameNum) + " r/b " + receivedBytes.Length + ", flags: " + receivedBytes.Flags);
+                        this.voiceClient.FramesMiss += miss;
+                        this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + evNumber + " fr#" + receivedBytes.FrameNum + " wr#" + frameWritePos + " miss: " + miss + " r/b " + receivedBytes.Length + ", flags: " + receivedBytes.Flags);
                     }
+                }
 
                 if (!threadingEnabled)
                 {
@@ -908,7 +852,7 @@ return;
                     }
                     catch (Exception e)
                     {
-                        voiceClient.logger.Log(LogLevel.Error, LogPrefix + ": Exception in receiveBytes: " + e);
+                        voiceClient.logger.LogError(LogPrefix + ": Exception in receiveBytes: " + e);
                         Interlocked.Decrement(ref receiving);
                         Dispose();
                     }
@@ -925,15 +869,12 @@ return;
         // A thread tries to lock a frameQueue element by writing 1 to the correspondent frameQueueLock element. If the previous value was already 1, lock fails and the thread starts over.
         // To release the lock, the thread writes 0.
         int[] eventQueueLock = new int[256];
-        // updated by an event with the most recent frame number
         byte frameWritePos;
-        // the frame to read in the next processFrame() call
         byte frameReadPos;
-        // the event to read in the next processFrame() call
         byte eventReadPos;
         AutoResetEvent frameQueueReady;
         int flushingFrameNum = -1; // if >= 0, we are flushing since the frame with this number: process the queue w/o delays until this frame encountered
-        static FrameBuffer nullFrame = new FrameBuffer();
+        FrameBuffer nullFrame = new FrameBuffer();
         // The queue of frames guaranteed to be processed.
         // These are currently only video config frames sent reliably w/o fragmentation.
         // Event queue processor can drop a config frame if it's delivered later than its neighbours.
@@ -977,10 +918,9 @@ return;
                 }
             }
 
-            byte maxFrameReadPos = (byte)(frameWritePos - df);
             int nullFramesCnt = 0; // to avoid infinite loop when read frame position does not advance for some reason
-            while (!disposed && nullFramesCnt++ < 10 && (byte)(maxFrameReadPos - frameReadPos) < 127) // maxFrameReadPos >= mFrameReadPos
-                {
+            while (!disposed && nullFramesCnt++ < 10 && (byte)(frameWritePos - frameReadPos) > df)
+            {
                 while (configFrameQueue.TryDequeue(out FrameBuffer confFrame))
                 {
                     options.Decoder.Input(ref confFrame);
@@ -995,7 +935,7 @@ return;
 
                 byte eventReadPosPrev = eventReadPos;
                 byte frameReadPosPrev = frameReadPos;
-                eventReadPos += processFrame(eventReadPos, maxFrameReadPos);
+                eventReadPos += processFrame(eventReadPos);
 
                 if (frameReadPosPrev != frameReadPos)
                 {
@@ -1034,7 +974,7 @@ return;
             }
             else
             {
-                if (voiceClient.logger.Level >= LogLevel.Debug) voiceClient.logger.Log(LogLevel.Debug, LogPrefix + " ev#" + lostEvNum + " FEC failed to recover because of non-FEC event in FEC events lookup array at index " + fecEvNum + " (" + (fecEv.Array == null ? "empty" : "flags: " + fecEv.Flags) + ")");
+                this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + lostEvNum + " FEC failed to recover because of non-FEC event in FEC events lookup array at index " + fecEvNum + " (" + (fecEv.Array == null ? "empty" : "flags: " + fecEv.Flags) + ")");
             }
             Interlocked.Exchange(ref fecQueueLock[fecEvNum], 0);               // unlock single FEC event slot
         }
@@ -1062,12 +1002,9 @@ return;
                     {
                         for (byte j = from; j != (byte)(i + 1); j++)
                         {
-                            if (j != lostEvNum) // all but lost
-                            {
-                                Interlocked.Exchange(ref eventQueueLock[j], 0);       // unlock single slot
-                            }
+                            Interlocked.Exchange(ref eventQueueLock[j], 0);       // unlock single slot
                         }
-                        if (voiceClient.logger.Level >= LogLevel.Debug) voiceClient.logger.Log(LogLevel.Debug, LogPrefix + " ev#" + lostEvNum + " FEC failed to recover from events " + from + "-" + fecEvNum + " because at least 2 events are lost");
+                        this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + lostEvNum + " FEC failed to recover from events " + from + "-" + fecEvNum + " because at least 2 events are lost");
 
 return false;
                     }
@@ -1077,18 +1014,15 @@ return false;
             // xor directly into FEC event buffer and unlock xored frames
             for (byte i = from; i != fecEvNum; i++)
             {
-                if (i != lostEvNum) // all but lost
+                var xf = eventQueue[i];
+                for (int j = 0; j < xf.Length; j++)
                 {
-                    var xf = eventQueue[i];
-                    for (int j = 0; j < xf.Length; j++)
-                    {
-                        fecEv.Array[fecEv.Offset + j] ^= xf.Array[xf.Offset + j];
-                    }
-                    flags ^= xf.Flags;
-                    frNumber ^= xf.FrameNum;
-                    size -= xf.Length;
-                    Interlocked.Exchange(ref eventQueueLock[i], 0);                   // unlock single slot
+                    fecEv.Array[fecEv.Offset + j] ^= xf.Array[xf.Offset + j];
                 }
+                flags ^= xf.Flags;
+                frNumber ^= xf.FrameNum;
+                size -= xf.Length;
+                Interlocked.Exchange(ref eventQueueLock[i], 0);                   // unlock single slot
             }
 
             if (size >= 0 && size <= fecEv.Length)
@@ -1097,19 +1031,19 @@ return false;
                 lostEv = new FrameBuffer(fecEv, fecEv.Offset, size, flags, frNumber);
                 // ... from FEC event slot in FEC queue
                 fecEv = nullFrame;
-                if (voiceClient.logger.Level >= LogLevel.Trace) voiceClient.logger.Log(LogLevel.Trace, LogPrefix + " ev#" + lostEvNum + " fr#" + lostEv.FrameNum + " FEC recovered from events " + from + "-" + fecEvNum + ", size: " + +size);
+                this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + lostEvNum + " fr#" + lostEv.FrameNum + " FEC recovered from events " + from + "-" + fecEvNum + ", size: " + +size);
                 return true;
             }
             else
             {
-                if (voiceClient.logger.Level >= LogLevel.Debug) voiceClient.logger.Log(LogLevel.Debug, LogPrefix + " ev#" + lostEvNum + " FEC failed to recover from FEC event of size " + fecEv.Length + " because of wrong size " + size);
+                this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + lostEvNum + " FEC failed to recover from FEC event of size " + fecEv.Length + " because of wrong resulting size " + size);
                 return false;
             }
         }
 
         // returns the number of events we have advanced
         // the caller passes 'eventReadPos' field to this method and updates it with returned value for clarity
-        byte processFrame(byte begEvNum, byte maxFrameReadPos)
+        byte processFrame(byte begEvNum)
         {
             while (Interlocked.Exchange(ref eventQueueLock[begEvNum], 1) == 1) ; // lock frame 1st event
             ref FrameBuffer begEv = ref eventQueue[begEvNum];
@@ -1120,43 +1054,25 @@ return false;
                 processLostEvent(begEvNum, ref begEv);
             }
 
-            if (begEv.IsConfig) // skip config frame processed in configFrameQueue
-            {
-                Interlocked.Exchange(ref eventQueueLock[begEvNum], 0);           // unlock frame 1st event
-                frameReadPos++;
-
-return 1;
-            }
-
             if (begEv.Array == null)
             {
-                if (voiceClient.logger.Level >= LogLevel.Trace) voiceClient.logger.Log(LogLevel.Trace, LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " wr#" + frameWritePos + " rd#" + frameReadPos + " lost event");
+                this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " wr#" + frameWritePos + " rd#" + frameReadPos + " lost event");
                 Interlocked.Exchange(ref eventQueueLock[begEvNum], 0);           // unlock frame 1st event
                 this.voiceClient.EventsLost++;
 
 return 1;
             }
 
-            // issue null frames if mFrameReadPos is behind the current event frame
-            while (frameReadPos != begEv.FrameNum)
+            // send null buffer to the decoder for missing frames
+            if (frameReadPos != begEv.FrameNum) // frameReadPos may be updated already by an earlier event with the same frame number
             {
-                if (voiceClient.logger.Level >= LogLevel.Trace) voiceClient.logger.Log(LogLevel.Trace, LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " wr#" + frameWritePos + " rd#" + frameReadPos + " missing frame");
-                options.Decoder.Input(ref nullFrame);
-                this.voiceClient.FramesLost++;
-
-                frameReadPos++;
-
-                if ((byte)(maxFrameReadPos - frameReadPos) >= 127) // maxFrameReadPos < mFrameReadPos, wait for write pos to increment
+                for (frameReadPos++; frameReadPos != begEv.FrameNum; frameReadPos++)
                 {
-                    Interlocked.Exchange(ref eventQueueLock[begEvNum], 0);           // unlock frame 1st event
-                    // mFrameReadPos points to the next frame
-
-return 0;
+                    this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " wr#" + frameWritePos + " rd#" + frameReadPos + " missing frame");
+                    options.Decoder.Input(ref nullFrame);
+                    this.voiceClient.FramesLost++;
                 }
             }
-
-            // set mFrameReadPos to the next frame
-            frameReadPos++;
 
             FrameFlags fragMask = (begEv.Flags & FrameFlags.MaskFrag);
 
@@ -1169,7 +1085,7 @@ return 0;
                 byte fragCount = begEv.Array[begEv.Offset + begEv.Length - 1]; // the count of fragments is in the last byte
                 if (fragCount == 0)
                 {
-                    this.voiceClient.logger.Log(LogLevel.Warning, LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " c#" + fragCount + " 1st event corrupted: 0 fragments count");
+                    this.voiceClient.logger.LogWarning(LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " c#" + fragCount + " 1st event corrupted: 0 fragments count");
                     Interlocked.Exchange(ref eventQueueLock[begEvNum], 0);           // unlock frame 1st event
 
 return 1;
@@ -1190,7 +1106,7 @@ return 1;
                 }
                 if (poolIdx == fragmentedPool.Length) // not found, the decoder retained too many frames, that's strange
                 {
-                    voiceClient.logger.Log(LogLevel.Error, LogPrefix + " Fragmented pool is full, allocating " + maxPayloadSize + " bytes directly");
+                    voiceClient.logger.LogError(LogPrefix + " Fragmented pool is full, allocating " + maxPayloadSize + " bytes directly");
                     fragmented = new byte[maxPayloadSize];
                 }
                 else  if (fragmentedPool[poolIdx] == null || fragmentedPool[poolIdx].Buf.Length < maxPayloadSize)  // reallocate buffer if needed
@@ -1234,7 +1150,7 @@ return 1;
                         partial = true;
                         Array.Clear(fragmented, payloadSize, begEvPayloadSize);
                         payloadSize += begEvPayloadSize;
-                        if (voiceClient.logger.Level >= LogLevel.Trace) voiceClient.logger.Log(LogLevel.Trace, LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " c#" + fragCount + " Fragmented segment zeroed due to invalid fragment ev#" + fragEvNum + " fr#" + fragEv.FrameNum + ", flags:" + fragEv.Flags + (fragEv.Array == null ? " NULL" : ""));
+                        this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " c#" + fragCount + " Fragmented segment zeroed due to invalid fragment ev#" + fragEvNum + " fr#" + fragEv.FrameNum + ", flags:" + fragEv.Flags + (fragEv.Array == null ? " NULL" : ""));
                     }
 
                     Interlocked.Exchange(ref eventQueueLock[fragEvNum], 0);       // unlock fragment slot
@@ -1258,7 +1174,7 @@ return 1;
                 {
                     this.voiceClient.FramesFragPart++;
                 }
-                if (voiceClient.logger.Level >= LogLevel.Trace) voiceClient.logger.Log(LogLevel.Trace, LogPrefix + " DEC ev#" + begEvNum + " fr#" + fragFrame.FrameNum + " c#" + fragCount + " Fragmented assembled from events " + begEvNum + "-" + (byte)(begEvNum + fragCount - 1) + ", size: " + payloadSize + ", flags: " + begEv.Flags);
+                this.voiceClient.logger.LogDebug(LogPrefix + " DEC ev#" + begEvNum + " fr#" + fragFrame.FrameNum + " c#" + fragCount + " Fragmented assembled from events " + begEvNum + "-" + (byte)(begEvNum + fragCount - 1) + ", size: " + payloadSize + ", flags: " + begEv.Flags);
 
                 options.Decoder.Input(ref fragFrame);
                 fragFrame.Release();
@@ -1271,7 +1187,7 @@ return fragCount;
             }
             else // unexected fragment
             {
-                // if (voiceClient.logger.Level >= LogLevel.Debug) voiceClient.logger.Log(LogLevel.Debug, LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " wr#" + frameWritePos + " Unexpected Fragment" + ", flags: " + begEv.Flags);
+                // this.voiceClient.logger.LogDebug(LogPrefix + " ev#" + begEvNum + " fr#" + begEv.FrameNum + " wr#" + frameWritePos + " Unexpected Fragment" + ", flags: " + begEv.Flags);
                 // we get here when the 1st fragment is lost
                 // TODO: we could skip to the last event of continuous fragments segment (end of the frame in the best case) to avoid repeatedly calling processFrame() on each fragment
                 this.voiceClient.EventsLost++;
@@ -1293,7 +1209,7 @@ return 1;
                 decoding = true;
             }
 
-            voiceClient.logger.Log(LogLevel.Info, LogPrefix + ": Starting decode thread");
+            voiceClient.logger.LogInfo(LogPrefix + ": Starting decode thread");
             frameQueueReady = new AutoResetEvent(false);
             try
             {
@@ -1310,7 +1226,7 @@ return 1;
             }
             catch (Exception e)
             {
-                voiceClient.logger.Log(LogLevel.Error, LogPrefix + ": Exception in decode thread: " + e);
+                voiceClient.logger.LogError(LogPrefix + ": Exception in decode thread: " + e);
                 decoding = false;
                 Dispose();
             }
@@ -1319,7 +1235,7 @@ return 1;
 #if UNITY_ANDROID
                 UnityEngine.AndroidJNI.DetachCurrentThread();
 #endif
-                voiceClient.logger.Log(LogLevel.Info, LogPrefix + ": Exiting decode thread");
+                voiceClient.logger.LogInfo(LogPrefix + ": Exiting decode thread");
             }
 
             decoding = false;
@@ -1359,18 +1275,14 @@ return 1;
 
             // no concurrent threads below this line
 
-            // Closing requires synchronization with frameQueueReady.Set() to avoid 'ObjectDisposedException: Safe handle has been closed'.
-            // On the other hand, we can simply drop all references to the wait handle and allow the garbage collector to do the job for you sometime later (wait handles implement the disposal pattern whereby the finalizer calls Close).
-            // This is one of the few scenarios where relying on this backup is (arguably)acceptable, because wait handles have a light OS burden (asynchronous delegates rely on exactly this mechanism to release their IAsyncResult’s wait handle):
-            // https://www.cnblogs.com/malaikuangren/archive/2012/06/02/2532239.html
-//            if (frameQueueReady != null)
-//            {
-//#if NETFX_CORE
-//                frameQueueReady.Dispose();
-//#else
-//                frameQueueReady.Close();
-//#endif
-//            }
+            if (frameQueueReady != null)
+            {
+#if NETFX_CORE
+                frameQueueReady.Dispose();
+#else
+                frameQueueReady.Close();
+#endif
+            }
 
             for (int i = 0; i < eventQueue.Length; i++)
             {

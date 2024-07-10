@@ -2,7 +2,6 @@
 
 using System.Collections.Generic;
 using Photon.Pun;
-using Photon.Voice;
 using Photon.Voice.PUN;
 using Photon.Voice.Unity;
 using UnityEngine;
@@ -48,7 +47,7 @@ public class ProximityVoiceTrigger : VoiceComponent
             byte group = this.TargetInterestGroup;
             if (this.photonVoiceView.RecorderInUse.InterestGroup != group)
             {
-                this.Logger.Log(LogLevel.Info, "Setting RecorderInUse's InterestGroup to {0}", group);
+                this.Logger.LogInfo("Setting RecorderInUse's InterestGroup to {0}", group);
                 this.photonVoiceView.RecorderInUse.InterestGroup = group;
             }
             this.photonVoiceView.RecorderInUse.RecordingEnabled = true;
@@ -63,7 +62,7 @@ public class ProximityVoiceTrigger : VoiceComponent
             if (trigger != null)
             {
                 byte group = trigger.TargetInterestGroup;
-                this.Logger.Log(LogLevel.Debug, "OnTriggerEnter {0}", group);
+                this.Logger.LogDebug("OnTriggerEnter {0}", group);
                 if (group == this.TargetInterestGroup)
                 {
                     return;
@@ -88,7 +87,7 @@ public class ProximityVoiceTrigger : VoiceComponent
             if (trigger != null)
             {
                 byte group = trigger.TargetInterestGroup;
-                this.Logger.Log(LogLevel.Debug, "OnTriggerExit {0}", group);
+                this.Logger.LogDebug("OnTriggerExit {0}", group);
                 if (group == this.TargetInterestGroup)
                 {
                     return;
@@ -129,7 +128,7 @@ public class ProximityVoiceTrigger : VoiceComponent
                 {
                     toRemove = this.groupsToRemove.ToArray();
                 }
-                this.Logger.Log(LogLevel.Info, "client of actor number {0} trying to change groups, to_be_removed#={1} to_be_added#={2}", this.TargetInterestGroup, this.groupsToRemove.Count, this.groupsToAdd.Count);
+                this.Logger.LogInfo("client of actor number {0} trying to change groups, to_be_removed#={1} to_be_added#={2}", this.TargetInterestGroup, this.groupsToRemove.Count, this.groupsToAdd.Count);
                 if (PunVoiceClient.Instance.Client.OpChangeGroups(toRemove, toAdd))
                 {
                     if (this.subscribedGroups != null)
@@ -164,7 +163,7 @@ public class ProximityVoiceTrigger : VoiceComponent
                 }
                 else
                 {
-                    this.Logger.Log(LogLevel.Error, "Error changing groups");
+                    this.Logger.LogError("Error changing groups");
                 }
             }
             this.ToggleTransmission();
@@ -179,7 +178,7 @@ public class ProximityVoiceTrigger : VoiceComponent
         }
         if (this.enabled)
         {
-            this.Logger.Log(LogLevel.Info, "Disabling ProximityVoiceTrigger as does not belong to local player, actor number {0}", this.TargetInterestGroup);
+            this.Logger.LogInfo("Disabling ProximityVoiceTrigger as does not belong to local player, actor number {0}", this.TargetInterestGroup);
             this.enabled = false;
         }
         return false;

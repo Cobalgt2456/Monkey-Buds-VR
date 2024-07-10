@@ -16,6 +16,9 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
+    "defineConstraints": [
+        "PHOTON_VOICE_FMOD_ENABLE"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }

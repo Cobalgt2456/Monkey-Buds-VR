@@ -4,8 +4,7 @@
     "references": [
         "Fusion.Editor",
         "PhotonVoice.Fusion",
-        "PhotonVoice.Editor",
-        "Fusion.Unity.Editor"
+        "PhotonVoice.Editor"
     ],
     "includePlatforms": [
         "Editor"

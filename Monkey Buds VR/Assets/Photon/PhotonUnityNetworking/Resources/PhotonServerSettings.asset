@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: PhotonServerSettings
   m_EditorClassIdentifier: 
   AppSettings:
-    AppIdRealtime: 17eb60da-b778-42e9-8870-1c62dac3bf53
+    AppIdRealtime: 932d3145-ea79-4543-b63f-01a76f11ecbb
     AppIdFusion: 
-    AppIdChat: 87e49576-e96a-4d7e-b3b7-2c435db671ac
-    AppIdVoice: 87e49576-e96a-4d7e-b3b7-2c435db671ac
+    AppIdChat: 
+    AppIdVoice: df3c09f3-64c8-425c-8b0a-58fe0479a0b4
     AppVersion: 
     UseNameServer: 1
     FixedRegion: eu
@@ -40,13 +40,19 @@ MonoBehaviour:
   - DestroyRpc
   - HeresWhy
   - DestroySpaceship
+  - Fire
+  - RespawnSpaceship
+  - RPCRefreshPlayerValues
+  - TagPlayer
+  - UntagPlayer
+  - TaggedRPC
+  - TagSoundRPC
+  - TagThisPlayer
+  - UnTaggedRPC
   - DisableGameObjects
   - DisableObjects
   - EnableGameObjects
   - EnableObjects
-  - Fire
-  - RespawnSpaceship
-  - RPCRefreshPlayerValues
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 0

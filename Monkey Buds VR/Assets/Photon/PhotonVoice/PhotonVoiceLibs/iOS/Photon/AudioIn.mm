@@ -48,10 +48,6 @@ struct CallbackData {
     AVAudioSessionCategory sessionCategory;
     AVAudioSessionMode sessionMode;
     AVAudioSessionCategoryOptions sessionCategoryOptions;
-    
-    AVAudioSessionCategory sessionCategoryPrev;
-    AVAudioSessionMode sessionModePrev;
-    AVAudioSessionCategoryOptions sessionCategoryOptionsPrev;
 }
 - (void)setup;
 - (void)storeCategory:(int)category mode:(int)mode options:(int)options;
@@ -277,7 +273,7 @@ static OSStatus    performRender (void                         *inRefCon,
             NSLog(@"[PV] [AI] Route change: OldDeviceUnavailable");
             break;
         case AVAudioSessionRouteChangeReasonCategoryChange:
-            NSLog(@"[PV] [AI] Route change: CategoryChange: category = %@, mode = %@, options = %lu", [[AVAudioSession sharedInstance] category], [[AVAudioSession sharedInstance] mode], (unsigned long)[[AVAudioSession sharedInstance] categoryOptions]);
+            NSLog(@"[PV] [AI] Route change: CategoryChange: %@", [[AVAudioSession sharedInstance] category]);
             break;
         case AVAudioSessionRouteChangeReasonOverride:
             NSLog(@"[PV] [AI] Route change: Override");
@@ -343,11 +339,6 @@ static OSStatus    performRender (void                         *inRefCon,
                                                 selector:@selector(handleMediaServerReset:)
                                                     name:AVAudioSessionMediaServicesWereResetNotification
                                                   object:sessionInstance];
-    
-    sessionCategoryPrev = [sessionInstance category];
-    sessionModePrev = [sessionInstance mode];
-    sessionCategoryOptionsPrev = [sessionInstance categoryOptions];
-    NSLog(@"[PV] [AI] Saving Previous category = %@, mode = %@, options = %lu", sessionCategoryPrev, sessionModePrev, (unsigned long)sessionCategoryOptionsPrev);
 }
 
 - (void) setSessionCategory
@@ -370,6 +361,7 @@ static OSStatus    performRender (void                         *inRefCon,
     NSLog(@"[PV] [AI] setupAudioSession");
     try {
         // Configure the audio session
+        [self setSessionCategory];
         AVAudioSession *sessionInstance = [AVAudioSession sharedInstance];
         
         NSError *error = nil;
@@ -509,7 +501,6 @@ static OSStatus    performRender (void                         *inRefCon,
     NSLog(@"[PV] [AI] setupAudioChain");
     [self setupAudioSession];
     [self setupIOUnit];
-    [self setSessionCategory];
 }
 
 - (OSStatus)startIOUnit
@@ -531,11 +522,11 @@ static OSStatus    performRender (void                         *inRefCon,
     AVAudioSession *sessionInstance = [AVAudioSession sharedInstance];
     NSError *error = nil;
     NSLog(@"[PV] [AI] Current category = %@, mode = %@, options = %lu", sessionInstance.category, sessionInstance.mode, (unsigned long)sessionInstance.categoryOptions);
-    [sessionInstance setCategory:sessionCategoryPrev
-                            mode:sessionModePrev
-                         options:sessionCategoryOptionsPrev
+    [sessionInstance setCategory:AVAudioSessionCategoryAmbient
+                            mode:AVAudioSessionModeDefault
+                         options:AVAudioSessionCategoryOptionMixWithOthers
                            error:&error];
-    NSLog(@"[PV] [AI] Reset to Previous category = %@, mode = %@, options = %lu", sessionCategoryPrev, sessionModePrev, (unsigned long)sessionCategoryOptionsPrev);
+    NSLog(@"[PV] [AI] Reset to default category = %@, mode = %@, options = %lu", sessionInstance.category, sessionInstance.mode, (unsigned long)sessionInstance.categoryOptions);
 
     return err;
 }

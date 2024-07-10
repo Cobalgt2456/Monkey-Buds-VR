@@ -33,7 +33,7 @@ namespace Photon.Voice
             {
                 configFrame = buf;
                 buf.Retain();
-                logger.Log(LogLevel.Info, "[PV] [VD] storing config frame " + configFrame.Length);
+                logger.LogInfo("[PV] [VD] storing config frame " + configFrame.Length);
             }
 
             if (!decoderReady)
@@ -43,7 +43,7 @@ namespace Photon.Voice
 
             if (configFrame.Array != null)
             {
-                logger.Log(LogLevel.Info, "[PV] [VD] decoding config frame " + configFrame.Length);
+                logger.LogInfo("[PV] [VD] decoding config frame " + configFrame.Length);
                 configFrameDecoded = true;
                 decoder.Input(ref configFrame); // this calls TryConfigure recursively, make sure that configFrameDecoded is true
                 configFrame.Release();

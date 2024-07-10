@@ -29,7 +29,7 @@ namespace Photon.Voice.MacOS
                 {
                     Error = "Exception in AudioInReader constructor";
                 }
-                logger.Log(LogLevel.Error, "[PV] AudioInReader: " + Error);
+                logger.LogError("[PV] AudioInReader: " + Error);
             }
         }
         public int Channels { get { return 1; } }
